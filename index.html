@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MIRA // Command Station</title>
+
+  <!-- Google Font & Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root {
+      --bg-dark: #101216;
+      --glass-bg: rgba(22, 26, 33, 0.75);
+      --glass-border: rgba(255, 255, 255, 0.15);
+      --glass-blur: blur(16px);
+      --theme-yellow: #ffcc00;
+      --theme-yellow-glow: rgba(255, 204, 0, 0.35);
+      --theme-grey-light: #2d333f;
+      --text-main: #f5f7fa;
+      --text-muted: #a0aab8;
+      --alert-red: #ff3355;
+      --safe-green: #00e676;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; user-select: none; }
+
+    body {
+      min-height: 100vh;
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      background: linear-gradient(135deg, rgba(16, 18, 22, 0.92) 0%, rgba(20, 24, 30, 0.85) 100%),
+                  url('https://images.unsplash.com/photo-1578328819058-b69f3a3b0f6b?q=80&w=2000&auto=format&fit=crop');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+    }
+
+    .glass-card {
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.5);
+    }
+
+    header.glass-navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 28px;
+      margin-bottom: 20px;
+      position: sticky;
+      top: 15px;
+      z-index: 100;
+    }
+
+    .nav-brand { display: flex; align-items: center; gap: 14px; }
+    .nav-brand h1 { font-size: 1.4rem; font-weight: 800; color: var(--theme-yellow); }
+    .nav-brand .badge {
+      background: rgba(255, 204, 0, 0.18);
+      border: 1px solid var(--theme-yellow);
+      color: var(--theme-yellow);
+      padding: 3px 10px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      border-radius: 6px;
+    }
+
+    .nav-links { display: flex; gap: 12px; align-items: center; }
+    .nav-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .nav-link:hover, .nav-link.active { color: var(--theme-yellow); background: rgba(255, 204, 0, 0.12); }
+
+    .btn-login {
+      background: var(--theme-yellow);
+      color: #000;
+      font-size: 0.95rem;
+      font-weight: 700;
+      padding: 10px 22px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 0 15px var(--theme-yellow-glow);
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 2.2fr 1fr;
+      gap: 20px;
+      flex: 1;
+    }
+
+    .card-header {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--theme-yellow);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* VIDEO STREAM BOX */
+    .video-container {
+      position: relative;
+      width: 100%;
+      height: 520px;
+      background: #000;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--theme-grey-light);
+    }
+
+    #mobile-camera-feed {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .camera-hud {
+      position: absolute;
+      top: 14px; left: 14px; right: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    .hud-badge {
+      background: rgba(0, 0, 0, 0.75);
+      border: 1px solid var(--theme-yellow);
+      color: var(--theme-yellow);
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .cam-controls {
+      position: absolute;
+      bottom: 14px; right: 14px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .cam-btn {
+      background: rgba(0, 0, 0, 0.8);
+      border: 1px solid var(--glass-border);
+      color: var(--text-main);
+      padding: 10px 18px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+    .cam-btn:hover { border-color: var(--theme-yellow); color: var(--theme-yellow); }
+    .cam-btn.active { background: var(--theme-yellow); color: #000; border-color: var(--theme-yellow); }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .metric-box {
+      background: rgba(16, 18, 22, 0.75);
+      border: 1px solid var(--glass-border);
+      padding: 14px 10px;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .metric-box label { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; }
+    .metric-box h3 { font-size: 1.1rem; font-weight: 800; margin-top: 6px; color: var(--theme-yellow); }
+
+    /* TELEOP CONTROLS */
+    .dpad-container { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 20px 0; }
+    .dpad-row { display: flex; gap: 10px; }
+
+    .dpad-btn {
+      width: 65px; height: 65px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--glass-border);
+      color: var(--text-main);
+      font-size: 1.2rem; font-weight: 800;
+      border-radius: 8px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .dpad-btn:hover, .dpad-btn.active {
+      background: var(--theme-yellow);
+      color: #000;
+      border-color: var(--theme-yellow);
+      box-shadow: 0 0 15px var(--theme-yellow-glow);
+    }
+    .dpad-btn.btn-stop { width: 140px; border-color: var(--alert-red); color: var(--alert-red); }
+    .dpad-btn.btn-stop:hover, .dpad-btn.btn-stop.active { background: var(--alert-red); color: #fff; }
+
+    .chart-box { height: 220px; width: 100%; margin-top: 10px; }
+    .ai-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.ai-stat-box {
+  background: rgba(16, 18, 22, 0.75);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.ai-stat-box span {
+  display: block;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.ai-stat-box strong {
+  font-size: 1rem;
+  color: var(--theme-yellow);
+}
+
+.ai-detection-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.ai-detection {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 11px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ai-detection-name {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.ai-confidence {
+  font-size: 0.78rem;
+  color: var(--theme-yellow);
+  font-weight: 700;
+}
+
+.ai-empty {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  text-align: center;
+  padding: 15px;
+}
+  </style>
+</head>
+<body>
+
+  <!-- TOP NAVBAR -->
+  <header class="glass-navbar glass-card">
+    <div class="nav-brand">
+      <i class="fa-solid fa-robot" style="font-size: 1.6rem; color: var(--theme-yellow);"></i>
+      <div>
+        <h1>MIRA</h1>
+        <div style="font-size: 0.8rem; color: var(--text-muted);">SURFACE CONTROL & TELEMETRY STATION</div>
+      </div>
+      <span class="badge">SIH26039</span>
+    </div>
+
+    <nav class="nav-links">
+      <a class="nav-link active"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
+      <a class="nav-link"><i class="fa-solid fa-video"></i> Camera Stream</a>
+      <a class="nav-link"><i class="fa-solid fa-chart-line"></i> Analytics</a>
+    </nav>
+
+    <button class="btn-login"><i class="fa-solid fa-right-to-bracket"></i> LOGIN</button>
+  </header>
+
+  <!-- DASHBOARD GRID -->
+  <div class="dashboard-grid">
+
+    <!-- LEFT COLUMN -->
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+      
+      <!-- Video Stream Section -->
+      <div class="glass-card" style="padding: 22px;">
+        <div class="card-header">
+          <span><i class="fa-solid fa-camera"></i> OnePlus 11R Stream</span>
+          <span style="font-size: 0.85rem; color: var(--safe-green);" id="cam-status">● STREAM LIVE</span>
+        </div>
+
+        <div class="video-container">
+          <!-- Direct IP Webcam Stream -->
+          <img id="mobile-camera-feed" src="/video_feed" alt="MIRA AI Vision..." />
+
+          <div class="camera-hud">
+            <div class="hud-badge"><i class="fa-solid fa-mobile-screen"></i> ONEPLUS 11R</div>
+            <div class="hud-badge" id="cam-lens-mode">LENS: BACK CAM</div>
+          </div>
+
+          <!-- CAMERA TOGGLE BUTTONS -->
+          <div class="cam-controls">
+            <button class="cam-btn active" id="btn-back" onclick="switchCameraLens(0)"><i class="fa-solid fa-camera-retro"></i> Back Cam</button>
+            <button class="cam-btn" id="btn-front" onclick="switchCameraLens(1)"><i class="fa-solid fa-user-gear"></i> Front Cam</button>
+            <button class="cam-btn" onclick="reconnectStream()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+          </div>
+        </div>
+
+        <!-- Metric Gauges (MATCHING YOUR ESP8266 EXACT VIRTUAL PINS) -->
+        <div class="metrics-grid">
+          <div class="metric-box">
+            <label>HUMIDITY (V5)</label>
+            <h3 id="val-humidity" style="color: #00d2ff;">--%</h3>
+          </div>
+          <div class="metric-box">
+            <label>TEMP (V6)</label>
+            <h3 id="val-temp" style="color: #ff9f43;">-- °C</h3>
+          </div>
+          <div class="metric-box">
+            <label>GAS (V7)</label>
+            <h3 id="val-gas">CHECKING...</h3>
+          </div>
+          <div class="metric-box">
+            <label>VIBRATION (V8)</label>
+            <h3 id="val-vibration">CHECKING...</h3>
+          </div>
+          <div class="metric-box">
+            <label>PROXIMITY (V9)</label>
+            <h3 id="val-proximity">CHECKING...</h3>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+
+      <!-- Rover Controls -->
+      <div class="glass-card" style="padding: 22px;">
+        <div class="card-header">
+          <span><i class="fa-solid fa-gamepad"></i> Rover Controls</span>
+        </div>
+
+        <div class="dpad-container">
+          <button class="dpad-btn" id="k-w" onmousedown="sendDrive('W')" onmouseup="sendDrive('STOP')" onmouseleave="sendDrive('STOP')">W</button>
+          <div class="dpad-row">
+            <button class="dpad-btn" id="k-a" onmousedown="sendDrive('A')" onmouseup="sendDrive('STOP')" onmouseleave="sendDrive('STOP')">A</button>
+            <button class="dpad-btn btn-stop" id="k-space" onclick="sendDrive('STOP')">STOP</button>
+            <button class="dpad-btn" id="k-d" onmousedown="sendDrive('D')" onmouseup="sendDrive('STOP')" onmouseleave="sendDrive('STOP')">D</button>
+          </div>
+          <button class="dpad-btn" id="k-s" onmousedown="sendDrive('S')" onmouseup="sendDrive('STOP')" onmouseleave="sendDrive('STOP')">S</button>
+        </div>
+
+        <p style="text-align: center; font-size: 0.85rem; color: var(--text-muted);">
+          Hold WASD keys or click screen buttons to navigate. Spacebar halts all movement.
+        </p>
+      </div>
+      <!-- AI VISION PANEL -->
+<div class="glass-card ai-card" style="padding: 22px;">
+
+  <div class="card-header">
+    <span>
+      <i class="fa-solid fa-crosshairs"></i>
+      AI Vision
+    </span>
+
+    <span id="ai-status"
+          style="font-size: 0.8rem; color: var(--safe-green);">
+      ● ACTIVE
+    </span>
+  </div>
+
+  <div class="ai-summary">
+
+    <div class="ai-stat-box">
+      <span>DETECTIONS</span>
+      <strong id="ai-count">0</strong>
+    </div>
+
+    <div class="ai-stat-box">
+      <span>MODEL</span>
+      <strong>YOLOv8</strong>
+    </div>
+
+  </div>
+
+  <div class="ai-detection-list" id="ai-detections">
+
+    <div class="ai-empty">
+      Waiting for detections...
+    </div>
+
+  </div>
+
+</div>
+
+      <!-- Realtime Graph -->
+      <div class="glass-card" style="padding: 22px;">
+        <div class="card-header">
+          <span><i class="fa-solid fa-chart-area"></i> Live Temp Trend</span>
+        </div>
+        <div class="chart-box">
+          <canvas id="gasTrendChart"></canvas>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    // IP Webcam API Host Address
+    const IP_WEBCAM_HOST = "http://192.0.0.4:8080";
+
+    // Blynk Cloud Configuration
+    const BLYNK_AUTH = "U1p3Lkg6PKWsjbTDQfMCefZ0Nn4B5Cbg";
+    const BLYNK_UPDATE_URL = `https://blynk.cloud/external/api/update?token=${BLYNK_AUTH}`;
+
+    let activeDirectionPin = null;
+
+    // Direct HTTP REST Call to update Blynk Virtual Pins
+    function setBlynkPin(vPin, state) {
+      fetch(`${BLYNK_UPDATE_URL}&${vPin}=${state}`)
+        .catch(err => console.error("[Blynk Drive Error]:", err));
+    }
+
+    // Camera Switch Logic
+    function switchCameraLens(lensId) {
+      fetch(`${IP_WEBCAM_HOST}/settings/ffc?set=${lensId}`, { mode: 'no-cors' })
+        .then(() => {
+          document.getElementById('cam-lens-mode').innerText = lensId === 1 ? "LENS: FRONT CAM" : "LENS: BACK CAM";
+          document.getElementById('btn-back').classList.toggle('active', lensId === 0);
+          document.getElementById('btn-front').classList.toggle('active', lensId === 1);
+          setTimeout(reconnectStream, 500);
+        })
+        .catch(err => console.error("Error switching lens:", err));
+    }
+
+    function reconnectStream() {
+      const img = document.getElementById('mobile-camera-feed');
+      img.src = `${IP_WEBCAM_HOST}/video?` + new Date().getTime();
+    }
+
+    // Teleoperation Handler (Integrated with ESP8266 Virtual Pins V1-V4)
+    function sendDrive(cmd) {
+      const pinMap = { 'W': 'V1', 'S': 'V2', 'A': 'V3', 'D': 'V4' };
+      const btnMap = { 'W': 'k-w', 'A': 'k-a', 'S': 'k-s', 'D': 'k-d', 'STOP': 'k-space' };
+
+      if (cmd === 'STOP') {
+        ['V1', 'V2', 'V3', 'V4'].forEach(pin => setBlynkPin(pin, 0));
+        activeDirectionPin = null;
+
+        Object.values(btnMap).forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.classList.remove('active');
+        });
+      } else if (pinMap[cmd]) {
+        const targetPin = pinMap[cmd];
+        if (activeDirectionPin !== targetPin) {
+          sendDrive('STOP');
+          activeDirectionPin = targetPin;
+          setBlynkPin(targetPin, 1);
+
+          const el = document.getElementById(btnMap[cmd]);
+          if (el) el.classList.add('active');
+        }
+      }
+    }
+
+    // Keyboard Binds
+    window.addEventListener('keydown', (e) => {
+      if (e.repeat) return;
+      const k = e.key.toUpperCase();
+      if (['W', 'A', 'S', 'D'].includes(k)) sendDrive(k);
+      if (e.key === ' ') sendDrive('STOP');
+    });
+
+    window.addEventListener('keyup', (e) => {
+      const k = e.key.toUpperCase();
+      if (['W', 'A', 'S', 'D'].includes(k)) sendDrive('STOP');
+    });
+
+    // Chart Initialization
+    const ctx = document.getElementById('gasTrendChart').getContext('2d');
+    const tempChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: ['--:--', '--:--', '--:--', '--:--', '--:--', 'NOW'],
+        datasets: [{
+          label: 'Temperature °C',
+          data: [0, 0, 0, 0, 0, 0],
+          borderColor: '#ff9f43',
+          backgroundColor: 'rgba(255, 159, 67, 0.12)',
+          fill: true,
+          tension: 0.3,
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#a0aab8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+          y: { ticks: { color: '#a0aab8' }, grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true }
+        }
+      }
+    });
+
+    // REAL-TIME TELEMETRY POLLING (Mapped strictly to your C++ pin structure)
+    function pollBlynkTelemetry() {
+      // Check hardware online status
+      fetch(`https://blynk.cloud/external/api/isHardwareConnected?token=${BLYNK_AUTH}`)
+        .then(res => res.json())
+        .then(isConnected => {
+          if (!isConnected) {
+            ['val-humidity', 'val-temp', 'val-gas', 'val-vibration', 'val-proximity'].forEach(id => {
+              const el = document.getElementById(id);
+              if (el) {
+                el.innerText = "OFFLINE";
+                el.style.color = "var(--text-muted)";
+              }
+            });
+            return;
+          }
+
+          // Fetch exact V5, V6, V7, V8, V9 from Blynk Cloud
+          fetch(`https://blynk.cloud/external/api/get?token=${BLYNK_AUTH}&V5&V6&V7&V8&V9`)
+            .then(response => response.json())
+            .then(data => {
+              // 1. Humidity (V5)
+              if (data.V5 !== undefined) {
+                document.getElementById('val-humidity').innerText = `${data.V5}%`;
+                document.getElementById('val-humidity').style.color = "#00d2ff";
+              }
+
+              // 2. Temperature (V6)
+              if (data.V6 !== undefined) {
+                const tempVal = parseFloat(data.V6);
+                document.getElementById('val-temp').innerText = `${tempVal} °C`;
+                document.getElementById('val-temp').style.color = "#ff9f43";
+
+                // Update Chart
+                const nowTime = new Date().toLocaleTimeString().split(' ')[0];
+                tempChart.data.labels.shift();
+                tempChart.data.labels.push(nowTime);
+                tempChart.data.datasets[0].data.shift();
+                tempChart.data.datasets[0].data.push(tempVal);
+                tempChart.update('none');
+              }
+
+              // 3. Gas Alert (V7)
+              if (data.V7 !== undefined) {
+                const gasElem = document.getElementById('val-gas');
+                const isGasDetected = String(data.V7).includes("GAS DETECTED");
+                gasElem.innerText = isGasDetected ? "GAS DETECTED" : "NORMAL";
+                gasElem.style.color = isGasDetected ? "var(--alert-red)" : "var(--safe-green)";
+              }
+
+              // 4. Vibration Alert (V8)
+              if (data.V8 !== undefined) {
+                const vibElem = document.getElementById('val-vibration');
+                const isVibDetected = String(data.V8).includes("VIBRATION DETECTED");
+                vibElem.innerText = isVibDetected ? "VIBRATION DETECTED" : "NORMAL";
+                vibElem.style.color = isVibDetected ? "var(--alert-red)" : "var(--safe-green)";
+              }
+
+              // 5. Object Detection Alert (V9)
+              if (data.V9 !== undefined) {
+                const objElem = document.getElementById('val-proximity');
+                const isObjDetected = String(data.V9).includes("OBJECT DETECTED");
+                objElem.innerText = isObjDetected ? "OBJECT DETECTED" : "NORMAL";
+                objElem.style.color = isObjDetected ? "var(--alert-red)" : "var(--safe-green)";
+              }
+            });
+        })
+        .catch(err => console.error("[Blynk Error]:", err));
+    }
+
+    // Poll Blynk Cloud every 1.5 seconds
+    setInterval(pollBlynkTelemetry, 1500);
+    pollBlynkTelemetry();
+    
+  </script>
+</body>
+</html>
