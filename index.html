@@ -78,15 +78,16 @@
       padding: 20px;
 
       background:
-        linear-gradient(
-          135deg,
-          rgba(16, 18, 22, 0.94) 0%,
-          rgba(20, 24, 30, 0.90) 100%
-        ),
-        url("https://images.unsplash.com/photo-1578328819058-b69f3a3b0f6b?q=80&w=2000&auto=format&fit=crop");
+    linear-gradient(
+      135deg,
+      rgba(16, 18, 22, 0.85) 0%,
+      rgba(20, 24, 30, 0.85) 100%
+    ),
+    url("/static/images/mine_image.jpeg");
 
       background-size: cover;
       background-position: center;
+      background-repeat: no-repeat;
       background-attachment: fixed;
     }
 
@@ -965,14 +966,14 @@
 
 
           <!-- =================================================
-               IMPORTANT:
+                IMPORTANT:
 
-               The browser does NOT directly display
-               /video from the phone anymore.
+                The browser does NOT directly display
+                /video from the phone anymore.
 
-               Flask receives the phone stream,
-               runs YOLO,
-               and exposes /video_feed.
+                Flask receives the phone stream,
+                runs YOLO,
+                and exposes /video_feed.
 
           ================================================== -->
 
@@ -1956,7 +1957,6 @@
         ) {
 
           event.preventDefault();
-
           sendDrive("STOP");
 
         }
@@ -1966,886 +1966,100 @@
 
 
     /* =========================================================
-       EMERGENCY STOP
-
-       Also stop rover if browser tab loses focus.
+       LIVE CHART INITIALIZATION
     ========================================================== */
 
-    window.addEventListener(
-      "blur",
-      () => {
-
-        sendDrive("STOP");
-
-      }
-    );
-
-
-    /* =========================================================
-       TEMPERATURE CHART
-    ========================================================== */
-
-    const ctx =
-      document
-        .getElementById(
-          "gasTrendChart"
-        )
-        .getContext("2d");
-
-
-    const tempChart =
-      new Chart(
-        ctx,
-        {
-
-          type: "line",
-
-
-          data: {
-
-            labels: [
-              "--:--",
-              "--:--",
-              "--:--",
-              "--:--",
-              "--:--",
-              "NOW"
-            ],
-
-
-            datasets: [
-
-              {
-
-                label:
-                  "Temperature °C",
-
-
-                data: [
-                  null,
-                  null,
-                  null,
-                  null,
-                  null,
-                  null
-                ],
-
-
-                borderColor:
-                  "#ff9f43",
-
-
-                backgroundColor:
-                  "rgba(255, 159, 67, 0.12)",
-
-
-                fill: true,
-
-
-                tension: 0.3,
-
-
-                borderWidth: 2,
-
-
-                pointRadius: 2
-
-              }
-
-            ]
-
+    const ctx = document.getElementById('gasTrendChart').getContext('2d');
+    const gasTrendChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Temperature (°C)',
+          data: [],
+          borderColor: '#ff9f43',
+          backgroundColor: 'rgba(255, 159, 67, 0.18)',
+          fill: true,
+          tension: 0.4,
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: { color: '#a0aab8', font: { size: 10 } }
           },
-
-
-          options: {
-
-            responsive: true,
-
-            maintainAspectRatio: false,
-
-
-            animation: false,
-
-
-            plugins: {
-
-              legend: {
-                display: false
-              }
-
-            },
-
-
-            scales: {
-
-              x: {
-
-                ticks: {
-                  color: "#a0aab8"
-                },
-
-
-                grid: {
-                  color:
-                    "rgba(255,255,255,0.05)"
-                }
-
-              },
-
-
-              y: {
-
-                ticks: {
-                  color: "#a0aab8"
-                },
-
-
-                grid: {
-                  color:
-                    "rgba(255,255,255,0.05)"
-                },
-
-
-                beginAtZero: false
-
-              }
-
-            }
-
+          y: {
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: { color: '#a0aab8', font: { size: 10 } }
           }
-
         }
-      );
+      }
+    });
 
 
     /* =========================================================
-       UPDATE TEMPERATURE CHART
+       TELEMETRY & AI DATA POLLING
     ========================================================== */
 
-    function updateTemperatureChart(
-      temperature
-    ) {
-
-
-      const now =
-        new Date()
-          .toLocaleTimeString(
-            [],
-            {
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit"
-            }
-          );
-
-
-      tempChart.data.labels.shift();
-
-      tempChart.data.labels.push(
-        now
-      );
-
-
-      tempChart
-        .data
-        .datasets[0]
-        .data
-        .shift();
-
-
-      tempChart
-        .data
-        .datasets[0]
-        .data
-        .push(temperature);
-
-
-      tempChart.update("none");
-
+    function updateChart(tempVal) {
+      const now = new Date().toLocaleTimeString();
+      if (gasTrendChart.data.labels.length > 10) {
+        gasTrendChart.data.labels.shift();
+        gasTrendChart.data.datasets[0].data.shift();
+      }
+      gasTrendChart.data.labels.push(now);
+      gasTrendChart.data.datasets[0].data.push(tempVal);
+      gasTrendChart.update();
     }
 
-
-    /* =========================================================
-       BLYNK TELEMETRY
-    ========================================================== */
-
-    async function pollBlynkTelemetry() {
-
-
+    async function fetchTelemetry() {
       try {
-
-
-        /*
-          Check ESP8266 hardware connection.
-        */
-
-        const connectionResponse =
-          await fetch(
-            `${BLYNK_BASE_URL}/isHardwareConnected?token=${BLYNK_AUTH}`
-          );
-
-
-        if (!connectionResponse.ok) {
-
-          throw new Error(
-            "Blynk connection check failed"
-          );
-
-        }
-
-
-        const isConnected =
-          await connectionResponse.json();
-
-
-        const blynkStatus =
-          document.getElementById(
-            "blynk-status"
-          );
-
-
-        if (!isConnected) {
-
-
-          blynkStatus.innerText =
-            "OFFLINE";
-
-
-          blynkStatus.className =
-            "status-value offline";
-
-
-          document.getElementById(
-            "flask-status"
-          ).innerText =
-            "ONLINE";
-
-
-          [
-            "val-humidity",
-            "val-temp",
-            "val-gas",
-            "val-vibration",
-            "val-proximity"
-          ].forEach(id => {
-
-            const element =
-              document.getElementById(id);
-
-
-            if (element) {
-
-              element.innerText =
-                "OFFLINE";
-
-              element.style.color =
-                "var(--text-muted)";
-
+        const response = await fetch('/detections');
+        if (response.ok) {
+          const data = await response.json();
+          
+          if (data.detections) {
+            const listEl = document.getElementById('detection-list');
+            document.getElementById('detection-count').innerText = data.detections.length;
+            
+            if (data.detections.length === 0) {
+              listEl.innerHTML = '<div class="no-detection">Waiting for AI detections...</div>';
+            } else {
+              listEl.innerHTML = data.detections.map(item => `
+                <div class="detection-item">
+                  <span class="detection-class">${item.class}</span>
+                  <span class="detection-confidence">${Math.round(item.confidence * 100)}%</span>
+                </div>
+              `).join('');
             }
-
-          });
-
-
-          return;
-
-        }
-
-
-        /*
-          Hardware is connected.
-        */
-
-        blynkStatus.innerText =
-          "ONLINE";
-
-
-        blynkStatus.className =
-          "status-value online";
-
-
-        /*
-          Read V5-V9.
-        */
-
-        const telemetryResponse =
-          await fetch(
-            `${BLYNK_BASE_URL}/get?token=${BLYNK_AUTH}&V5&V6&V7&V8&V9`
-          );
-
-
-        if (!telemetryResponse.ok) {
-
-          throw new Error(
-            "Telemetry request failed"
-          );
-
-        }
-
-
-        const data =
-          await telemetryResponse.json();
-
-
-        /* =====================================================
-           HUMIDITY V5
-        ====================================================== */
-
-        if (
-          data.V5 !== undefined
-        ) {
-
-
-          const humidity =
-            parseFloat(data.V5);
-
-
-          document.getElementById(
-            "val-humidity"
-          ).innerText =
-            `${humidity}%`;
-
-
-          document.getElementById(
-            "val-humidity"
-          ).style.color =
-            "var(--cyan)";
-
-        }
-
-
-        /* =====================================================
-           TEMPERATURE V6
-        ====================================================== */
-
-        if (
-          data.V6 !== undefined
-        ) {
-
-
-          const temperature =
-            parseFloat(data.V6);
-
-
-          if (
-            Number.isFinite(
-              temperature
-            )
-          ) {
-
-
-            document.getElementById(
-              "val-temp"
-            ).innerText =
-              `${temperature} °C`;
-
-
-            document.getElementById(
-              "val-temp"
-            ).style.color =
-              "var(--orange)";
-
-
-            updateTemperatureChart(
-              temperature
-            );
-
           }
 
-        }
-
-
-        /* =====================================================
-           GAS V7
-        ====================================================== */
-
-        if (
-          data.V7 !== undefined
-        ) {
-
-
-          const gasElement =
-            document.getElementById(
-              "val-gas"
-            );
-
-
-          const gasValue =
-            String(data.V7)
-              .toUpperCase();
-
-
-          const gasDetected =
-            gasValue.includes(
-              "GAS DETECTED"
-            ) ||
-            gasValue === "1";
-
-
-          if (gasDetected) {
-
-            gasElement.innerText =
-              "GAS DETECTED";
-
-            gasElement.style.color =
-              "var(--alert-red)";
-
-          } else {
-
-            gasElement.innerText =
-              "NORMAL";
-
-            gasElement.style.color =
-              "var(--safe-green)";
-
+          if (data.telemetry) {
+            document.getElementById('val-humidity').innerText = data.telemetry.humidity ?? '--';
+            document.getElementById('val-temp').innerText = data.telemetry.temp ? `${data.telemetry.temp}°C` : '--';
+            document.getElementById('val-gas').innerText = data.telemetry.gas ?? '--';
+            document.getElementById('val-vibration').innerText = data.telemetry.vibration ?? '--';
+            document.getElementById('val-proximity').innerText = data.telemetry.proximity ?? '--';
+            
+            if (data.telemetry.temp !== undefined) {
+              updateChart(data.telemetry.temp);
+            }
           }
-
         }
-
-
-        /* =====================================================
-           VIBRATION V8
-        ====================================================== */
-
-        if (
-          data.V8 !== undefined
-        ) {
-
-
-          const vibrationElement =
-            document.getElementById(
-              "val-vibration"
-            );
-
-
-          const vibrationValue =
-            String(data.V8)
-              .toUpperCase();
-
-
-          const vibrationDetected =
-            vibrationValue.includes(
-              "VIBRATION DETECTED"
-            ) ||
-            vibrationValue === "1";
-
-
-          if (vibrationDetected) {
-
-            vibrationElement.innerText =
-              "VIBRATION DETECTED";
-
-            vibrationElement.style.color =
-              "var(--alert-red)";
-
-          } else {
-
-            vibrationElement.innerText =
-              "NORMAL";
-
-            vibrationElement.style.color =
-              "var(--safe-green)";
-
-          }
-
-        }
-
-
-        /* =====================================================
-           PROXIMITY V9
-        ====================================================== */
-
-        if (
-          data.V9 !== undefined
-        ) {
-
-
-          const proximityElement =
-            document.getElementById(
-              "val-proximity"
-            );
-
-
-          const proximityValue =
-            String(data.V9)
-              .toUpperCase();
-
-
-          const objectDetected =
-            proximityValue.includes(
-              "OBJECT DETECTED"
-            ) ||
-            proximityValue === "1";
-
-
-          if (objectDetected) {
-
-            proximityElement.innerText =
-              "OBJECT DETECTED";
-
-            proximityElement.style.color =
-              "var(--alert-red)";
-
-          } else {
-
-            proximityElement.innerText =
-              "NORMAL";
-
-            proximityElement.style.color =
-              "var(--safe-green)";
-
-          }
-
-        }
-
+      } catch (err) {
+        console.warn('[Telemetry Error]', err);
       }
-
-
-      catch (error) {
-
-
-        console.error(
-          "[Blynk Telemetry Error]",
-          error
-        );
-
-
-        document.getElementById(
-          "blynk-status"
-        ).innerText =
-          "ERROR";
-
-
-        document.getElementById(
-          "blynk-status"
-        ).className =
-          "status-value offline";
-
-      }
-
     }
 
-
-    /* =========================================================
-       AI DETECTION API
-    ========================================================== */
-
-    async function pollAIDetections() {
-
-
-      try {
-
-
-        const response =
-          await fetch(
-            `/api/detections?timestamp=${Date.now()}`
-          );
-
-
-        if (!response.ok) {
-
-          throw new Error(
-            `AI API HTTP ${response.status}`
-          );
-
-        }
-
-
-        const data =
-          await response.json();
-
-
-        /*
-          Flask is alive.
-        */
-
-        document.getElementById(
-          "flask-status"
-        ).innerText =
-          "ONLINE";
-
-
-        document.getElementById(
-          "flask-status"
-        ).className =
-          "status-value online";
-
-
-        document.getElementById(
-          "yolo-status"
-        ).innerText =
-          "ACTIVE";
-
-
-        document.getElementById(
-          "yolo-status"
-        ).className =
-          "status-value online";
-
-
-        /*
-          Update detection count.
-        */
-
-        document.getElementById(
-          "detection-count"
-        ).innerText =
-          data.count ?? 0;
-
-
-        const list =
-          document.getElementById(
-            "detection-list"
-          );
-
-
-        /*
-          No objects.
-        */
-
-        if (
-          !data.detections ||
-          data.detections.length === 0
-        ) {
-
-
-          list.innerHTML = `
-            <div class="no-detection">
-              No objects detected in current frame.
-            </div>
-          `;
-
-
-          return;
-
-        }
-
-
-        /*
-          Display detections.
-        */
-
-        list.innerHTML = "";
-
-
-        data.detections.forEach(
-          detection => {
-
-
-            const item =
-              document.createElement(
-                "div"
-              );
-
-
-            item.className =
-              "detection-item";
-
-
-            const className =
-              document.createElement(
-                "span"
-              );
-
-
-            className.className =
-              "detection-class";
-
-
-            className.innerText =
-              String(
-                detection.class ||
-                "Unknown"
-              ).toUpperCase();
-
-
-            const confidence =
-              document.createElement(
-                "span"
-              );
-
-
-            confidence.className =
-              "detection-confidence";
-
-
-            confidence.innerText =
-              `${detection.confidence}%`;
-
-
-            item.appendChild(
-              className
-            );
-
-
-            item.appendChild(
-              confidence
-            );
-
-
-            list.appendChild(
-              item
-            );
-
-          }
-        );
-
-      }
-
-
-      catch (error) {
-
-
-        console.error(
-          "[MIRA AI Error]",
-          error
-        );
-
-
-        document.getElementById(
-          "flask-status"
-        ).innerText =
-          "OFFLINE";
-
-
-        document.getElementById(
-          "flask-status"
-        ).className =
-          "status-value offline";
-
-
-        document.getElementById(
-          "yolo-status"
-        ).innerText =
-          "OFFLINE";
-
-
-        document.getElementById(
-          "yolo-status"
-        ).className =
-          "status-value offline";
-
-
-        document.getElementById(
-          "detection-list"
-        ).innerHTML = `
-          <div class="no-detection">
-            AI detection service unavailable.
-          </div>
-        `;
-
-      }
-
-    }
-
-
-    /* =========================================================
-       PHONE CAMERA STATUS
-
-       This checks whether the phone IP Webcam endpoint
-       is reachable. It does NOT replace the Flask AI stream.
-    ========================================================== */
-
-    async function checkPhoneCamera() {
-
-
-      try {
-
-
-        /*
-          no-cors allows us to determine that the request
-          was sent successfully even though IP Webcam may
-          not provide CORS headers.
-
-          We don't attempt to read the response.
-        */
-
-        await fetch(
-          `${IP_WEBCAM_HOST}/video`,
-          {
-            mode: "no-cors",
-            cache: "no-store"
-          }
-        );
-
-
-        document.getElementById(
-          "phone-status"
-        ).innerText =
-          "CONNECTED";
-
-
-        document.getElementById(
-          "phone-status"
-        ).className =
-          "status-value online";
-
-      }
-
-
-      catch (error) {
-
-
-        document.getElementById(
-          "phone-status"
-        ).innerText =
-          "UNREACHABLE";
-
-
-        document.getElementById(
-          "phone-status"
-        ).className =
-          "status-value offline";
-
-      }
-
-    }
-
-
-    /* =========================================================
-       START MIRA SERVICES
-    ========================================================== */
-
-    pollBlynkTelemetry();
-
-    pollAIDetections();
-
-    checkPhoneCamera();
-
-
-    /*
-      Blynk telemetry:
-      every 1.5 seconds
-    */
-
-    setInterval(
-      pollBlynkTelemetry,
-      1500
-    );
-
-
-    /*
-      AI detections:
-      every 1 second
-    */
-
-    setInterval(
-      pollAIDetections,
-      1000
-    );
-
-
-    /*
-      Phone camera status:
-      every 5 seconds
-    */
-
-    setInterval(
-      checkPhoneCamera,
-      5000
-    );
-
+    setInterval(fetchTelemetry, 1000);
 
   </script>
-
 </body>
 </html>
