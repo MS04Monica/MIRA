@@ -1,3 +1,4 @@
+
 from flask import Flask, Response, jsonify, render_template
 import cv2
 from ultralytics import YOLO
