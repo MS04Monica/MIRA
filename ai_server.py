@@ -130,6 +130,12 @@ def video_feed():
         generate_frames(),
         mimetype="multipart/x-mixed-replace; boundary=frame"
     )
+# ============================================================
+# ANALYTICS DASHBOARD
+# ============================================================
+@app.route('/analytics')
+def analytics():
+    return render_template('analytics.html')
 
 # ============================================================
 # AI DETECTIONS API

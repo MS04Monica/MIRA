@@ -430,7 +430,6 @@
       margin-top: 10px;
     }
 
-    /* EXPANDED MAP HEIGHT FOR THE MAIN COLUMN */
     #rover-map {
       height: 480px;
       width: 100%;
@@ -439,7 +438,6 @@
       z-index: 1;
     }
 
-    /* LEAFLET CONTROL OVERRIDES FOR DARK THEME */
     .leaflet-control-layers {
       background: rgba(16, 18, 22, 0.9) !important;
       color: var(--text-main) !important;
@@ -483,7 +481,6 @@
       color: var(--alert-red);
     }
 
-    /* RESPONSIVE */
     @media (max-width: 1100px) {
       .dashboard-grid {
         grid-template-columns: 1fr;
@@ -527,9 +524,7 @@
 
 <body>
 
-  <!-- =========================================================
-       TOP NAVIGATION
-  ========================================================== -->
+  <!-- TOP NAVIGATION -->
   <header class="glass-navbar glass-card">
     <div class="nav-brand">
       <i class="fa-solid fa-robot" style="font-size: 1.6rem; color: var(--theme-yellow);"></i>
@@ -543,22 +538,20 @@
     </div>
 
     <nav class="nav-links">
-      <a class="nav-link active"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
-      <a class="nav-link"><i class="fa-solid fa-video"></i> Camera Stream</a>
-      <a class="nav-link"><i class="fa-solid fa-chart-line"></i> Analytics</a>
-    </nav>
+  <a class="nav-link active" href="/"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
+  <a class="nav-link" href="/camera"><i class="fa-solid fa-video"></i> Camera Stream</a>
+  <a class="nav-link" href="/analytics"><i class="fa-solid fa-chart-line"></i> Analytics</a>
+</nav>
 
     <button class="btn-login" onclick="alert('MIRA operator authentication module')">
       <i class="fa-solid fa-right-to-bracket"></i> LOGIN
     </button>
   </header>
 
-  <!-- =========================================================
-       MAIN DASHBOARD
-  ========================================================== -->
+  <!-- MAIN DASHBOARD -->
   <div class="dashboard-grid">
 
-    <!-- LEFT COLUMN (PRIMARY VIEWPORT & ANALYTICS) -->
+    <!-- LEFT COLUMN -->
     <div class="column">
 
       <!-- CAMERA PANEL -->
@@ -641,7 +634,7 @@
         </div>
       </div>
 
-      <!-- LARGE TACTICAL SATELLITE MAP PANEL (PLACED DIRECTLY BELOW DETECTION ENGINE) -->
+      <!-- SATELLITE MAP PANEL -->
       <div class="glass-card panel">
         <div class="card-header">
           <span><i class="fa-solid fa-map-location-dot"></i> Live Tactical Satellite Map</span>
@@ -650,7 +643,6 @@
           </span>
         </div>
 
-        <!-- LEAFLET MAP CONTAINER (HIGH-RESOLUTION LARGE CARD) -->
         <div id="rover-map"></div>
 
         <div style="display: flex; justify-content: space-between; margin-top: 14px; font-size: 0.8rem; color: var(--text-muted);">
@@ -661,7 +653,7 @@
 
     </div>
 
-    <!-- RIGHT COLUMN (CONTROLS & SECONDARY PANELS) -->
+    <!-- RIGHT COLUMN -->
     <div class="column">
 
       <!-- ROVER CONTROLS -->
@@ -737,24 +729,18 @@
     </div>
   </div>
 
-  <!-- =========================================================
-       JAVASCRIPT LOGIC
-  ========================================================== -->
+  <!-- JAVASCRIPT LOGIC -->
   <script>
-    const IP_WEBCAM_HOST = "http://192.0.0.4:8080";
     const BLYNK_AUTH = "U1p3Lkg6PKWsjbTDQfMCefZ0Nn4B5Cbg";
     const BLYNK_BASE_URL = "https://blynk.cloud/external/api";
     const BLYNK_UPDATE_URL = `${BLYNK_BASE_URL}/update?token=${BLYNK_AUTH}`;
 
     let activeDirectionPin = null;
 
-    // =========================================================
-    // LEAFLET MAP - SATELLITE & DARK TILE CONFIGURATION
-    // =========================================================
-    let currentLat = 23.7516; // Jharia Coalfield, Dhanbad, Jharkhand
+    // LEAFLET MAP CONFIGURATION
+    let currentLat = 23.7516;
     let currentLng = 86.4170;
 
-    // Map Base Layers
     const darkTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       maxZoom: 19,
       subdomains: 'abcd',
@@ -763,17 +749,18 @@
 
     const satelliteTileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       maxZoom: 19,
-      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+      attribution: 'Tiles &copy; Esri'
     });
 
-    // Initialize Map with Satellite Layer by default
     const map = L.map('rover-map', {
       center: [currentLat, currentLng],
       zoom: 14,
       layers: [satelliteTileLayer]
     });
 
-    // Layer Toggle Control (Top-Right of Map)
+    // Fix map rendering issues inside flex containers
+    setTimeout(() => { map.invalidateSize(); }, 400);
+
     const baseMaps = {
       "Satellite View": satelliteTileLayer,
       "Dark Vector": darkTileLayer
@@ -781,7 +768,6 @@
 
     L.control.layers(baseMaps).addTo(map);
 
-    // Jharkhand Mining Regions Highlights
     const coalMines = [
       { name: "Jharia Coalfield", lat: 23.7516, lng: 86.4170, type: "Active Prime Field" },
       { name: "Dhanbad Mining Hub", lat: 23.7957, lng: 86.4304, type: "Regional Operations" },
@@ -798,7 +784,6 @@
       }).addTo(map).bindPopup(`<b>${mine.name}</b><br>Type: ${mine.type}`);
     });
 
-    // MIRA Rover Marker & Path Line
     const roverMarker = L.marker([currentLat, currentLng]).addTo(map)
       .bindPopup("<b>MIRA Rover</b><br>Deployed in Jharia Coalfield");
 
@@ -823,18 +808,17 @@
       document.getElementById("gps-coords-display").innerText = `${lat.toFixed(4)}° N, ${lng.toFixed(4)}° E`;
     }
 
-    // =========================================================
-    // BLYNK & CAMERA CONTROLS
-    // =========================================================
+    // BLYNK & PROXIED CAMERA CONTROLS
     function setBlynkPin(vPin, state) {
       fetch(`${BLYNK_UPDATE_URL}&${vPin}=${state}`)
       .catch(error => console.error("[Blynk Drive Error]", error));
     }
 
+    // Flask Proxied Camera Switcher (Fixes CORS)
     function switchCameraLens(lensId) {
-      const url = `${IP_WEBCAM_HOST}/settings/ffc?set=${lensId}`;
-      fetch(url, { mode: "no-cors" })
-      .then(() => {
+      fetch(`/switch_camera?lens=${lensId}`)
+      .then(res => res.json())
+      .then(data => {
         document.getElementById("cam-lens-mode").innerText = lensId === 1 ? "LENS: FRONT CAM" : "LENS: BACK CAM";
         document.getElementById("btn-back").classList.toggle("active", lensId === 0);
         document.getElementById("btn-front").classList.toggle("active", lensId === 1);
@@ -879,7 +863,6 @@
         if (el) el.classList.add("active");
         document.getElementById("rover-control-status").innerText = `MOVING ${cmd}`;
 
-        // SIMULATE MOVEMENT ON JHARKHAND MAP ON MANUAL CONTROL
         let stepLat = currentLat;
         let stepLng = currentLng;
         if (cmd === 'W') stepLat += 0.0003;
@@ -890,16 +873,18 @@
       }
     }
 
-    // WASD Keyboard Listeners
+    // WASD Debounced Keyboard Listeners
     window.addEventListener("keydown", event => {
+      if (event.repeat) return; // Prevent network flooding on key hold
+      
       const key = event.key.toUpperCase();
       if (["W", "A", "S", "D"].includes(key)) {
         event.preventDefault();
-        if (!event.repeat) sendDrive(key);
+        sendDrive(key);
       }
       if (event.code === "Space") {
         event.preventDefault();
-        if (!event.repeat) sendDrive("STOP");
+        sendDrive("STOP");
       }
     });
 
@@ -988,7 +973,6 @@
     }
 
     setInterval(fetchTelemetry, 1000);
-
   </script>
 </body>
 </html>
